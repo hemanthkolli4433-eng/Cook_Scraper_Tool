@@ -1,0 +1,51 @@
+name: Cook County Daily Run - Self Hosted Windows
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 10:30 AM India time = 05:00 UTC
+    - cron: '0 5 * * *'
+
+jobs:
+  run-cook-tool:
+    runs-on: [self-hosted, Windows]
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show environment
+        shell: powershell
+        run: |
+          python --version
+          echo "Runner name: $env:RUNNER_NAME"
+          echo "Computer: $env:COMPUTERNAME"
+
+      - name: Install Python packages
+        shell: powershell
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Cook County tool on local Windows machine
+        shell: powershell
+        env:
+          HEADLESS: '0'
+          WAIT_SECONDS: '120'
+          MAX_RETRIES: '3'
+          PAUSE_AFTER_SEARCH: '5'
+          COOK_USE_PROFILE: '1'
+        run: python Cook_Search_Tool.py
+
+      - name: Upload output and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cook_output_self_hosted_${{ github.run_number }}
+          path: |
+            Cook_output.xlsx
+            logs/**
+            error_screenshots/**
+            error_pages/**
+          if-no-files-found: warn
